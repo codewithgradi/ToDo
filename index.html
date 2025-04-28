@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TooList</title>
+    <!-- Link to icons from fontaweson cdn  -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+     crossorigin="anonymous" referrerpolicy="no-referrer" />
+     <!--css styles -->
+      <style>
+          /* CSS Defaults */
+            *{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body{
+                /* body back ground */
+                background: linear-gradient(90deg,rgb(158, 154, 154),rgb(73, 71, 71));
+            }
+            /* styles */
+            .heading{
+                font-weight: bolder;
+            }
+            .nav button,.search button{
+                padding: 8px;
+                border-radius: 8px;
+                border: 1px solid grey;
+                background-color: transparent;
+                box-shadow: 1px 1px 1px grey;
+            }
+            .nav button:hover,.nav button:active{
+                background-color: black;
+                cursor: pointer;
+                color: whitesmoke;
+                transition: 0.5s;
+            }
+            .search button{
+                padding: 10px;
+                width:80px;
+                color: whitesmoke;
+                background-color: black;
+            }
+            .search button,.fa-trash:hover,.lbl input:hover{
+                cursor: pointer;
+            }
+            .main-container{
+                border: 1px solid grey;
+                border-radius: 10px;
+                box-shadow: 2px 2px 30px rgb(8, 8, 8);
+                max-width: 60%;
+                padding: 1rem;
+                background-color: whitesmoke;
+                font-family: Arial, Helvetica, sans-serif;
+                margin: 1rem auto ;
+            }
+            header{
+                display: flex;
+                justify-content: space-between;
+                margin: 1rem 0;
+            }
+            .tasks,.lbl{
+                display: flex;
+            }
+            .search{
+                display: flex;
+                justify-content: space-between;
+                margin: 3rem 0;
+            }
+            .tasks{
+                justify-content: space-between;
+                margin: 2rem 0;
+            }
+            #task-to-add{
+                width:90%;
+                padding: 0 1rem;
+                border-radius: 10px;
+                outline: none;
+                border: 1px solid grey;
+                font-weight: 700;
+                font-family: Arial, Helvetica, sans-serif;
+            }
+            #task{
+                padding-right: 30px;
+                text-wrap: nowrap;
+                margin-left: 10px;
+            }
+            .fa-trash{
+                color: red;
+            }
+      </style>
+</head>
+<body>
+    <!-- Header content -->
+    <div class="main-container">
+        <header>
+            <h4 class="heading">ToDo List</h4>
+            <div class="nav">
+                <button id="all">All</button>
+                <button id="active">Active</button>
+                <button id="Completed">Completed</button>
+            </div>
+        </header>
+        <!-- main content -->
+        <main>
+            <section class="search">
+                <input type="text" name="" placeholder="Add a new todo.." id="task-to-add">
+                <button id="add">+ Add</button>
+            </section>
+            <ul class="tasks-list" id="tasks">
+            </ul>     
+        </main>
+    </div>
+    <script>
+        let mytasks = []; // Stores tasks locally
+
+        // Load tasks from localStorage OR from API
+        function loadData() {
+            if (localStorage.getItem('mytasks')) {
+                mytasks = JSON.parse(localStorage.getItem('mytasks'));
+                displayData();
+            } else {
+                fetch('https://jsonplaceholder.typicode.com/todos?_limit=10')
+                    .then(response => response.json())
+                    .then(data => {
+                        mytasks = data;
+                        saveToLocal();
+                        displayData();
+                    });
+            }
+        }
+
+        function displayData(filter = 'all') {
+            const list = document.getElementById('tasks');
+            list.innerHTML = ''; // Clear current tasks
+
+            let filteredTasks = mytasks;
+            if (filter === 'completed') {
+                filteredTasks = mytasks.filter(task => task.completed);
+            } else if (filter === 'active') {
+                filteredTasks = mytasks.filter(task => !task.completed);
+            }
+
+            // creating elements
+            filteredTasks.forEach(task => {
+                const liCreated = document.createElement('li');
+                const labelCreated = document.createElement('label');
+                const inputCreated = document.createElement('input');
+                const pCreated = document.createElement('p');
+                const iCreated = document.createElement('i');
+
+                if (task.completed) {
+                    pCreated.style.textDecoration = "line-through";
+                    pCreated.style.opacity = 0.6;
+                }
+
+                inputCreated.type = "checkbox";
+                inputCreated.checked = task.completed;
+                inputCreated.addEventListener('change', () => {
+                    task.completed = inputCreated.checked;
+                    saveToLocal();
+                    displayData(filter);
+                });
+
+                liCreated.className = "tasks";
+                labelCreated.className = "lbl";
+                pCreated.id = "task";
+                iCreated.className = "fa-solid fa-trash";
+
+                pCreated.textContent = task.title;
+
+                liCreated.appendChild(labelCreated);
+                labelCreated.appendChild(inputCreated);
+                labelCreated.appendChild(pCreated);
+                liCreated.appendChild(iCreated);
+
+                list.appendChild(liCreated);
+            });
+        }
+
+        document.getElementById('tasks').addEventListener('click', function (e) {
+            if (e.target.classList.contains('fa-trash')) {
+                const li = e.target.closest('li');
+                const taskText = li.querySelector('p').textContent;
+
+                // Remove from array
+                mytasks = mytasks.filter(t => t.title !== taskText);
+
+                saveToLocal();
+                displayData();
+            }
+        });
+
+        document.getElementById('add').addEventListener('click', function () {
+            let taskAdded = document.getElementById('task-to-add').value.trim();
+            if (taskAdded === '') return; // prevent empty task
+
+            const newTask = { title: taskAdded, completed: false };
+            mytasks.unshift(newTask); // add to beginning
+            saveToLocal();
+            document.getElementById('task-to-add').value = '';
+            displayData();
+        });
+        //  filters
+        document.getElementById('all').addEventListener('click', () => {
+            displayData('all');
+        });
+
+        document.getElementById('Completed').addEventListener('click', () => {
+            displayData('completed');
+        });
+
+        document.getElementById('active').addEventListener('click', () => {
+            displayData('active');
+        });
+        // saves to local storage
+        function saveToLocal() {
+            localStorage.setItem('mytasks', JSON.stringify(mytasks));
+        }
+
+        loadData(); // Initial call  
+    </script>
+</body>
+</html>
